@@ -1,5 +1,5 @@
 (ns tic-tac-toe 
-  (:require [clojure.set :as clojure.set]))
+  (:require [clojure.set :as cset]))
 
 (def player1 {:name "player1"
               :symbol :X
@@ -17,10 +17,10 @@
 (defn won? [player]
   (some #(every? (:moves player) %) winning-moves))
 
-(defn drawn? [moves1 moves2] 
-  (<= 9 (count (clojure.set/union moves1 moves2))))
+(defn drawn? [moves] 
+  (<= 9 (count moves)))
 
-(defn move []
+(defn read-move []
   (->> (read-line)
        (read-string)))
 
@@ -33,15 +33,28 @@
     (assoc game :current-player next-player
            :next-player current-player)))
 
+(defn valid? [moves move]
+  (and (< 0 move 10) (not (moves move))))
+
+(defn get-all-moves [game]
+  (let [current-player-moves (:moves (:current-player game))
+        next-player-moves (:moves (:next-player game))]
+    (cset/union current-player-moves next-player-moves)))
+
+(defn handle-turn [game]
+  (let [move (read-move)
+        moves (get-all-moves game)]
+    (if (valid? moves move)
+      (change-turn (add-move game move))
+      game)))
+
 (defn conduct-turn [game]
-  (let [current-player (:current-player game)
-        next-player (:next-player game)
-        current-player-moves (:moves current-player)
-        next-player-moves (:moves next-player)]
+  (let [next-player (:next-player game)
+        moves (get-all-moves game)]
     (cond 
       (won? next-player) (assoc game :over true :winner next-player)
-      (drawn? current-player-moves next-player-moves) (assoc game :over true :drawn true)
-      :else (change-turn (add-move game (move))))))
+      (drawn? moves) (assoc game :over true :drawn true)
+      :else (handle-turn game))))
 
 (defn game-not-over? [game]
   (not (:over game)))
@@ -49,8 +62,8 @@
 (defn results [game]
   (cond
     (:winner game) (str (:name (:winner game)) " ne game khatam kr diya...")
-    (:drawn game) (str "Game drawn!!!"))
-  )
+    (:drawn game) (str "Game drawn!!!")
+    :else (str "Something went wrong!!!")))
 
 (defn play-game []
   (first (drop-while game-not-over? (iterate conduct-turn game))))
